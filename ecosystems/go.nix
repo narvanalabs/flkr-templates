@@ -36,6 +36,10 @@ let
     vendorHash = config.vendorHash;
     go = goPackage;
     ldflags = [ "-s" "-w" ];
+    # Tests run in a sandbox with no network, no services, no secrets.
+    # Projects with integration tests (DB, APIs, etc.) will always fail.
+    # Testing belongs in CI, not in the Nix build.
+    doCheck = false;
   };
 
   shellHook = builtins.concatStringsSep "\n" (

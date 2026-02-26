@@ -21,6 +21,7 @@ let
     version = "0.1.0";
     src = config.src;
     nativeBuildInputs = map (d: pkgs.${d}) config.systemDeps;
+    doCheck = false;
   } // (if config.cargoHash != null then {
     cargoHash = config.cargoHash;
   } else {
