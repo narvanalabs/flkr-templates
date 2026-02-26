@@ -35,7 +35,6 @@ let
     src = config.src;
     vendorHash = config.vendorHash;
     go = goPackage;
-    subPackages = [ "." ];
     ldflags = [ "-s" "-w" ];
   };
 
