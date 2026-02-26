@@ -1,5 +1,9 @@
 # Java ecosystem builder
 # Supports: maven, gradle | spring
+#
+# Uses stdenv.mkDerivation to build the JAR.
+# Note: Maven/Gradle need pre-fetched deps or network access (--option sandbox false)
+# for the initial build. The PaaS pipeline handles this.
 { pkgs, config }:
 
 let
@@ -19,6 +23,34 @@ let
     gradle = [ pkgs.gradle ];
   }.${config.packageManager} or [ ];
 
+  # Determine where the JAR ends up based on package manager
+  jarDir = if config.packageManager == "gradle" then "build/libs" else "target";
+
+  package = pkgs.stdenv.mkDerivation {
+    pname = "java-app";
+    version = "0.1.0";
+    src = config.src;
+    nativeBuildInputs = [ jdkPackage ] ++ pmPackages
+      ++ (map (d: pkgs.${d}) config.systemDeps);
+    JAVA_HOME = "${jdkPackage.home}";
+    buildPhase = ''
+      runHook preBuild
+      ${if config.buildCommand != null then config.buildCommand else "echo 'No build command configured'"}
+      runHook postBuild
+    '';
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/lib $out/bin
+      cp ${jarDir}/*.jar $out/lib/
+      cat > $out/bin/start <<WRAPPER
+      #!/bin/sh
+      exec ${jdkPackage}/bin/java -jar $out/lib/*.jar "\$@"
+      WRAPPER
+      chmod +x $out/bin/start
+      runHook postInstall
+    '';
+  };
+
   shellHook = builtins.concatStringsSep "\n" (
     map (e: "export ${e}") config.envVars
   );
@@ -34,22 +66,10 @@ in
     '';
   };
 
-  package = pkgs.writeShellApplication {
-    name = "build";
-    runtimeInputs = [ jdkPackage ] ++ pmPackages;
-    text = ''
-      cd "${config.src}"
-      ${if config.buildCommand != null then config.buildCommand else "echo 'No build command configured'"}
-    '';
-  };
+  inherit package;
 
   app = {
     type = "app";
-    program = let
-      script = pkgs.writeShellScript "start" ''
-        cd "${config.src}"
-        ${if config.startCommand != null then config.startCommand else "echo 'No start command configured'"}
-      '';
-    in "${script}";
+    program = "${package}/bin/start";
   };
 }

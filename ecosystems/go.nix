@@ -1,9 +1,12 @@
 # Go ecosystem builder
 # Supports: gomod | gin
+#
+# Uses buildGoModule for sandboxed, cacheable builds.
+# Requires vendored dependencies (vendor/) or an explicit vendorHash.
 { pkgs, config }:
 
 let
-  # Version selection: go_1_22, go_1_23
+  # Version selection: go_1_22, go_1_23, go_1_24, go_1_25
   goPackage =
     if config.version != null then
       let
@@ -15,6 +18,26 @@ let
       pkgs.${attr} or pkgs.go
     else
       pkgs.go;
+
+  # Extract binary name from startCommand: "./flkr" → "flkr"
+  binName = let
+    cmd = if config.startCommand != null then config.startCommand else "./app";
+    tokens = builtins.filter (x: builtins.isString x && x != "")
+      (builtins.split " " cmd);
+    firstToken = builtins.head tokens;
+    segments = builtins.filter (x: builtins.isString x && x != "")
+      (builtins.split "/" firstToken);
+  in builtins.elemAt segments (builtins.length segments - 1);
+
+  package = pkgs.buildGoModule {
+    pname = binName;
+    version = "0.1.0";
+    src = config.src;
+    vendorHash = config.vendorHash;
+    go = goPackage;
+    subPackages = [ "." ];
+    ldflags = [ "-s" "-w" ];
+  };
 
   shellHook = builtins.concatStringsSep "\n" (
     map (e: "export ${e}") config.envVars
@@ -30,22 +53,10 @@ in
     '';
   };
 
-  package = pkgs.writeShellApplication {
-    name = "build";
-    runtimeInputs = [ goPackage ];
-    text = ''
-      cd "${config.src}"
-      ${if config.buildCommand != null then config.buildCommand else "go build -o app ."}
-    '';
-  };
+  inherit package;
 
   app = {
     type = "app";
-    program = let
-      script = pkgs.writeShellScript "start" ''
-        cd "${config.src}"
-        ${if config.startCommand != null then config.startCommand else "./app"}
-      '';
-    in "${script}";
+    program = "${package}/bin/${binName}";
   };
 }
