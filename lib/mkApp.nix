@@ -13,6 +13,9 @@
   port ? null,
   systemDeps ? [ ],
   envVars ? [ ],
+  # Project version for the derivation (store path, nix search, etc.).
+  # Defaults to "0.0.0" if not provided.
+  appVersion ? "0.0.0",
   # Go: hash of vendored deps. null = use vendor/ dir (recommended).
   vendorHash ? null,
   # Rust: hash of cargo deps. null = use Cargo.lock from source.
@@ -55,7 +58,7 @@ let
     else ecoDefault;
 
   config = {
-    inherit ecosystem src version framework envVars vendorHash cargoHash;
+    inherit ecosystem src version framework envVars vendorHash cargoHash appVersion;
     packageManager = resolvedPM;
     buildCommand = resolve buildCommand (frameworkDefaults.buildCommand or null) (pmDefaults.buildCommand or null) ecoDefaults.buildCommand;
     startCommand = resolve startCommand (frameworkDefaults.startCommand or null) (pmDefaults.startCommand or null) ecoDefaults.startCommand;

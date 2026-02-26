@@ -18,7 +18,7 @@ let
 
   package = pkgs.rustPlatform.buildRustPackage ({
     pname = binName;
-    version = "0.1.0";
+    version = config.appVersion;
     src = config.src;
     nativeBuildInputs = map (d: pkgs.${d}) config.systemDeps;
     doCheck = false;

@@ -28,7 +28,7 @@ let
 
   package = pkgs.stdenv.mkDerivation {
     pname = "java-app";
-    version = "0.1.0";
+    version = config.appVersion;
     src = config.src;
     nativeBuildInputs = [ jdkPackage ] ++ pmPackages
       ++ (map (d: pkgs.${d}) config.systemDeps);

@@ -31,7 +31,7 @@ let
 
   package = pkgs.buildGoModule {
     pname = binName;
-    version = "0.1.0";
+    version = config.appVersion;
     src = config.src;
     vendorHash = config.vendorHash;
     go = goPackage;
